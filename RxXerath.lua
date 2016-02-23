@@ -110,9 +110,9 @@ function RxXerath:CreateMenu()
         self.cfg.misc.hc:Slider("R", "R Hit-Chance", 4, 1, 10, 0.5)
       --[[self.cfg.misc:Menu("delay", "R Casting Delays")
         self.cfg.misc.delay:Slider("c1", "Delay Cast 2", 75, 0, 500, 5)
-        self.cfg.misc.delay:Slider("c1", "Delay Cast 3", 75, 0, 500, 5)
+        self.cfg.misc.delay:Slider("c1", "Delay Cast 3", 75, 0, 500, 5)]]
       self.cfg.misc:Menu("Interrupt", "Interrupt With E")
-      --self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")]]
+      --self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")
 
     DelayAction(function()
     local str = {[_Q] = "Q", [_W] = "W", [_E] = "E", [_R] = "R"}

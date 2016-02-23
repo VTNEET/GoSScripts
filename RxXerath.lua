@@ -143,7 +143,7 @@ function RxXerath:Fight(myHero)
     self:CheckRUsing()
     if IOW:Mode() == "Combo" then
      if self.cfg.misc.castCombo.WE:Value() then
-      if IsReady(_W) or IsReady(_E) then
+      if not myHero:CanUseSpell(_W) == 5 or not myHero:CanUseSpell(_E) == 5 then
        if IsReady(_E) and self.cfg.cb.E:Value() and ETarget then self:CastE(ETarget) end
        if IsReady(_W) and self.cfg.cb.W:Value() and WTarget then self:CastW(WTarget) end
        if IsReady(_Q) and self.cfg.cb.Q:Value() and QTarget then self:CastQ(QTarget) end
@@ -154,17 +154,17 @@ function RxXerath:Fight(myHero)
        if IsReady(_Q) and self.cfg.cb.Q:Value() and QTarget then self:CastQ(QTarget) end
      end
 
-    elseif IOW:Mode() == "Harass" and self.cfg.hr.Enable:Value() then
+    elseif IOW:Mode() == "Harass" and self.cfg.hr.Enable:Value() <= GetPercentMP(myHero) then
        if IsReady(_E) and self.cfg.hr.E:Value() and ETarget then self:CastE(ETarget) end
        if IsReady(_W) and self.cfg.hr.W:Value() and WTarget then self:CastW(WTarget) end
        if IsReady(_Q) and self.cfg.hr.Q:Value() and QTarget then self:CastQ(QTarget) end
 
     elseif IOW:Mode() == "LaneClear" then
-     if self.cfg.lc.Enable:Value() then self:LaneClear() end
+     if self.cfg.lc.Enable:Value() <= GetPercentMP(myHero) then self:LaneClear() end
 	 self:JungleClear()
     end
 
-    if self.cfg.ks.Enable:Value() then self:KillSteal() end
+    if self.cfg.ks.Enable:Value() <= GetPercentMP(myHero) then self:KillSteal() end
 end
 
 function RxXerath:CheckRUsing()

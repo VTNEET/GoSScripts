@@ -132,7 +132,7 @@ function RxXerath:CheckingValues()
     if self.Q.Charging == false then
      if self.Q.Range ~= self.Q.minRange then self.Q.Range = self.Q.minRange end
     else
-     self.Q.Range = math.min(self.Q.minRange-20 + (os.clock() - self.Q.LastCastTime)*500, self.Q.maxRange+20)
+     self.Q.Range = math.min(self.Q.minRange-25 + (os.clock() - self.Q.LastCastTime)*500, self.Q.maxRange)
     end
     if IsReady(_R) then
      if self.R.Using == false then

@@ -14,7 +14,7 @@ function RxXerath:__init()
  Callback.Add("Tick", function(myHero) self:Fight(myHero) end)
  Callback.Add("Draw", function() self:Drawings() end)
  Callback.Add("DrawMinimap", function() self:DrawRRange() end)
- Callback.Add("ProcessSpell", function(unit, spell) self:AutoE(unit, spell) end)
+ Callback.Add("ProcessSpell", function(unit, spell) self:AutoE(unit, spell) self:GetRCount(unit, spell) end)
  Callback.Add("CreateObj", function(o) self:CreateObj(o) end)
  Callback.Add("DeleteObj", function(o) self:DeleteObj(o) end)
  Callback.Add("UpdateBuff", function(unit, buff) self:AddBuff(unit, buff) end)
@@ -26,9 +26,9 @@ function RxXerath:LoadValues()
  Ignite = (GetCastName(myHero, SUMMONER_1):lower():find("summonerdot") and SUMMONER_1 or (GetCastName(myHero, SUMMONER_2):lower():find("summonerdot") and SUMMONER_2 or nil))
  self.data = function(spell) return myHero:GetSpellData(spell) end
  self.Q = { Range = 0, minRange = 750, maxRange = 1500, Speed = math.huge, Delay = 0.55,  Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
- self.W = { Range = self.data(_W).range,                Speed = math.huge, Delay = 0.675, Width = 240, Damage = function(unit) return myHero:CalcMagicDamage(unit, 30 + 30*self.data(_W).level + 0.6*myHero.ap) end}
- self.E = { Range = self.data(_E).range,                Speed = 1200,      Delay = 0.25,  Width = 80,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
- self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Width = 120, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 50*self.data(_R).level + 0.433*myHero.ap) end, IsUsing = false, LastCastTime = 0, Count = 0}
+ self.W = { Range = self.data(_W).range,                Speed = math.huge, Delay = 0.675, Width = 200, Damage = function(unit) return myHero:CalcMagicDamage(unit, 30 + 30*self.data(_W).level + 0.6*myHero.ap) end}
+ self.E = { Range = self.data(_E).range,                Speed = 1200,      Delay = 0.25,  Width = 60,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
+ self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Delay1 = 0, Delay2 = 0, Delay3 = 0, Width = 120, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 50*self.data(_R).level + 0.433*myHero.ap) end, IsUsing = false, LastCastTime = 0, Count = 3}
  QT = TargetSelector(self.Q.maxRange, 8, DAMAGE_MAGIC)
  WT = TargetSelector(self.W.Range, 8, DAMAGE_MAGIC)
  ET = TargetSelector(self.E.Range, 2, DAMAGE_MAGIC)
@@ -106,13 +106,14 @@ function RxXerath:CreateMenu()
       self.cfg.misc:Menu("hc", "Spell HitChance")
         self.cfg.misc.hc:Slider("Q", "Q Hit-Chance", 2.5, 1, 10, 0.5)
         self.cfg.misc.hc:Slider("W", "W Hit-Chance", 2.5, 1, 10, 0.5)
-        self.cfg.misc.hc:Slider("E", "E Hit-Chance", 3, 1, 10, 0.5)
+        self.cfg.misc.hc:Slider("E", "E Hit-Chance", 2.5, 1, 10, 0.5)
         self.cfg.misc.hc:Slider("R", "R Hit-Chance", 4, 1, 10, 0.5)
-      --[[self.cfg.misc:Menu("delay", "R Casting Delays")
-        self.cfg.misc.delay:Slider("c1", "Delay Cast 2", 75, 0, 500, 5)
-        self.cfg.misc.delay:Slider("c1", "Delay Cast 3", 75, 0, 500, 5)]]
+      self.cfg.misc:Menu("delay", "R Casting Delays")
+        self.cfg.misc.delay:Slider("c1", "Delay CastR 1", 170, 0, 500, 5)
+        self.cfg.misc.delay:Slider("c2", "Delay CastR 2", 130, 0, 500, 5)
+        self.cfg.misc.delay:Slider("c3", "Delay CastR 3", 100, 0, 500, 5)
       self.cfg.misc:Menu("Interrupt", "Interrupt With E")
-      --self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")
+      self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")
 
     DelayAction(function()
     local str = {[_Q] = "Q", [_W] = "W", [_E] = "E", [_R] = "R"}
@@ -124,23 +125,49 @@ function RxXerath:CreateMenu()
       end
      end
     end, 1)
-    --AddGapcloseEvent(_E, self.E.Range, false, self.cfg.misc.GapClose)
+    AddGapcloseEvent(_E, myHero:GetSpellData(_E).range, false, self.cfg.misc.GapClose)
 end
 
-function RxXerath:GetQRange()
+function RxXerath:CheckingValues()
     if self.Q.Charging == false then
      if self.Q.Range ~= self.Q.minRange then self.Q.Range = self.Q.minRange end
     else
      self.Q.Range = math.min(self.Q.minRange-20 + (os.clock() - self.Q.LastCastTime)*500, self.Q.maxRange+20)
     end
+    if IsReady(_R) then
+     if self.R.Using == false then
+     self.R.Count = 3
+     self.R.Delay1 = 0
+     self.R.Delay2 = 0
+     self.R.Delay3 = 0
+     self:CheckRUsing()
+     IOW.movementEnabled = true
+     IOW.attacksEnabled = true
+	 else
+     self:CheckRCasting()
+     if EnemiesAround(myHero.pos, 1500) == 0 then IOW.movementEnabled = false IOW.attacksEnabled = false else IOW.movementEnabled = true IOW.attacksEnabled = true end
+     end
+    end
+end
+
+function RxXerath:GetRCount(unit, spell)
+   if not self.R.Using then return end
+    if unit == myHero and spell.name == "xerathlocuspulse" then
+    self.R.Count = self.R.Count - 1
+     if self.R.Count == 2 then
+     self.R.Delay2 = os.clock()
+     elseif self.R.Count == 1 then
+     self.R.Delay3 = os.clock()
+     end
+    end
 end
 
 function RxXerath:Fight(myHero)
    if myHero.dead then return end
-    self:GetQRange()
-    if self.R.Using then self:CheckRCasting() return end
+    self:CheckingValues()
+    if self.R.Using then return end
     QTarget, WTarget, ETarget = QT:GetTarget(), WT:GetTarget(), ET:GetTarget()
-    self:CheckRUsing()
+    self.R.Count = 3
     if IOW:Mode() == "Combo" then
      if self.cfg.misc.castCombo.WE:Value() then
       if not myHero:CanUseSpell(_W) == 5 or not myHero:CanUseSpell(_E) == 5 then
@@ -181,14 +208,24 @@ function RxXerath:CheckRCasting()
     if self.cfg.ult.cast.mode:Value() < 3 then
     local target = self:GetRTarget(myHero.pos, self.R.Range())
      if self.cfg.ult.cast.mode:Value() == 1 and self.cfg.ult.cast.key:Value() then
-      self:CastR(target)
+      self:CheckRDelay(target)
      elseif self.cfg.ult.cast.mode:Value() == 2 then
-      self:CastR(target)
+      self:CheckRDelay(target)
      end
     else
     local target = self:GetRTarget(GetMousePos(), self.cfg.ult.cast.range:Value())
-      self:CastR(target)
+      self:CheckRDelay(target)
     end
+end
+
+function RxXerath:CheckRDelay(target)
+    if self.R.Count == 3 and os.clock() - self.R.Delay1 > self.cfg.misc.delay.c1:Value()/100 then
+     self:CastR(target)
+    elseif self.R.Count == 2 and os.clock() - self.R.Delay2 > self.cfg.misc.delay.c2:Value()/100 then
+     self:CastR(target)
+    elseif self.R.Count == 1 and os.clock() - self.R.Delay3 > self.cfg.misc.delay.c3:Value()/100 then
+     self:CastR(target)
+	end
 end
 
 function RxXerath:CastR(target)
@@ -224,6 +261,10 @@ function RxXerath:CastE(target)
 end
 
 function RxXerath:LaneClear()
+    if IsReady(_W) then
+    local WPos, WHit = GetFarmPosition(self.W.Range, self.W.Width, MINION_ENEMY)
+       if WHit >= self.cfg.lc.W:Value() then CastSkillShot(_W, WPos) end
+    end
     if IsReady(_Q) then
     local QPos, QHit = GetLineFarmPosition(self.Q.maxRange, self.Q.Width, MINION_ENEMY)
      if self.Q.Charging == false then
@@ -234,25 +275,21 @@ function RxXerath:LaneClear()
       end
      end
     end
-    if IsReady(_W) then
-    local WPos, WHit = GetFarmPosition(self.W.Range, self.W.Width, MINION_ENEMY)
-       if WHit >= self.cfg.lc.W:Value() then CastSkillShot(_W, WPos) end
-    end
 end
 
 function RxXerath:JungleClear()
     for m, mob in pairs(minionManager.objects) do
      if mob.team == MINION_JUNGLE and IsInRange(mob, self.Q.maxRange) then
-      if IsReady(_Q) and self.cfg.jc.Q:Value() and not self.Q.Charging then
-       CastSkillShot(_Q, GetMousePos())
-      elseif IsReady(_Q) and self.cfg.jc.Q:Value() and self.Q.Charging and GetDistance(mob.pos) <= self.Q.Range then
-       CastSkillShot2(_Q, mob.pos)
-      end
       if IsReady(_W) and self.cfg.jc.W:Value() and IsInRange(mob, self.W.Range) then
        CastSkillShot(_W, GetCircularAOEPrediction(mob, { delay = self.W.Delay, speed = self.W.Speed, width = self.W.Width, range = self.W.Range }).castPos)
       end
       if IsReady(_E) and self.cfg.jc.E:Value() and IsInRange(mob, self.E.Range) then
        CastSkillShot(_E, GetLinearAOEPrediction(mob, { delay = self.E.Delay, speed = self.E.Speed, width = self.E.Width, range = self.E.Range }).castPos)
+      end
+      if IsReady(_Q) and self.cfg.jc.Q:Value() and not self.Q.Charging then
+       CastSkillShot(_Q, GetMousePos())
+      elseif IsReady(_Q) and self.cfg.jc.Q:Value() and self.Q.Charging and GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange }) and GetDistance(GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange }).castPos) <= self.Q.Range then
+       CastSkillShot2(_Q, GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange }).castPos)
       end
      end
     end
@@ -279,6 +316,7 @@ function RxXerath:KillSteal()
 end
 
 function RxXerath:AutoE(unit, spell)
+   if self.R.Using then return end
     if unit.type == myHero.type and unit.team ~= myHero.team then
      if CHANELLING_SPELLS[spell.name] then
       if IsInRange(unit, self.E.Range) and unit.charName == CHANELLING_SPELLS[spell.name].Name and self.cfg.misc.Interrupt[unit.charName.."Inter"]:Value() then 
@@ -301,7 +339,7 @@ function RxXerath:RKillable()
     for i, enemy in pairs(GetEnemyHeroes()) do
      i = i+1
      if IsInRange(enemy, self.R.Range()) and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.R.Damage(enemy) * 3 then
-      DrawText(enemy.charName.." R Killable", 25, 0, 110+i*15, GoS.Red)
+      DrawText(enemy.charName.." R Killable", 30, GetResolution().x/80, GetResolution().y/6+i*15, GoS.Red)
      end
     end
 end
@@ -421,22 +459,15 @@ function RxXerath:AddBuff(unit, buff)
      if buff.Name == "XerathArcanopulseChargeUp" then
       self.Q.LastCastTime = os.clock()
       self.Q.Charging = true
+      IOW.movementEnabled = true
      elseif buff.Name == "xerathqsoundbuff" then
       self.Q.Charging = false
+      self.Q.LastCastTime = 0
       IOW.attacksEnabled = true
      elseif buff.Name == "XerathLocusOfPower2" then
+      self.R.Delay1 = os.clock()
       self.R.LastCastTime = os.clock()
       self.R.IsUsing = true
-      if EnemiesAround(myHero.pos, 1500) > 0 then
-      IOW.movementEnabled = false
-      IOW.attacksEnabled = false
-      end
-     elseif buff.Name:lower():find("xerathlocuspulse") then
-      self.R.LastCastTime = os.clock()
-      if EnemiesAround(myHero.pos, 1500) > 0 then
-      IOW.attacksEnabled = false
-      IOW.movementEnabled = false
-      end
      end
     end
 end
@@ -465,12 +496,11 @@ function RxXerath:CheckUpdate()
 end
 
 function RxXerath:Print(text)
-	return PrintChat(string.format("<font color=\"#4169E1\">[Rx Xerath]:</font><font color=\"#FFFFFF\"> %s</font>",tostring(text)))
+	return PrintChat(string.format("<font color=\"#4169E1\"><b>[Rx Xerath]:</b></font><font color=\"#FFFFFF\"> %s</font>",tostring(text)))
 end
 
 function RxXerath:Hello()
- PrintChat("<font color='#FFFF00'>RxXerath Version 0.01 Loaded Success</font>")
- PrintChat(string.format("<font color='#08F7F3'>Enjoy and Good Luck %s (%s)</font>", GetUser(), myHero.name))
+ PrintChat(string.format("<font color=\"#4169E1\"><b>[Rx Xerath]:</b></font><font color=\"#FFFFFF\"><i> Loaded Success</i></font><font color=\"#FFFFFF\"> | Good Luck %s</font>",GetUser()))
 end
 if myHero.charName == "Xerath" then RxXerath() else PrintChat(string.format("<font color='#FFFFFF'>Script Not Supported for</font><font color='#8B008B'> %s</font>",myHero.charName)) end
 

@@ -26,7 +26,7 @@ function RxXerath:LoadValues()
  self.Q = { Range = 0, minRange = 750, maxRange = 1500,                       Speed = math.huge, Delay = 0.575,  Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
  self.W = { Range = self.data(_W).range,                                      Speed = math.huge, Delay = 0.675, Width = 200, Damage = function(unit) return myHero:CalcMagicDamage(unit, 30 + 30*self.data(_W).level + 0.6*myHero.ap) end}
  self.E = { Range = self.data(_E).range,                                      Speed = 1200,      Delay = 0.5,  Width = 60,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
- self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Width = 140, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 50*self.data(_R).level + 0.433*myHero.ap) end, Activating = false, LastCastTime = 0, Count = 3, Delay1 = 0, Delay2 = 0, Delay3 = 0}
+ self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Width = 140, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 55*self.data(_R).level + 0.433*myHero.ap) end, Activating = false, LastCastTime = 0, Count = 3, Delay1 = 0, Delay2 = 0, Delay3 = 0}
  QT = TargetSelector(self.Q.maxRange, 8, DAMAGE_MAGIC)
  WT = TargetSelector(self.W.Range, 8, DAMAGE_MAGIC)
  ET = TargetSelector(self.E.Range, 2, DAMAGE_MAGIC)
@@ -479,7 +479,7 @@ function RxXerath:CheckUpdate()
 	ToUpdate.CallbackNoUpdate = function(NewVersion) self:Print("You are using Lastest Version ("..NewVersion..")") self:Hello() end
 	ToUpdate.CallbackNewVersion = function(NewVersion) self:Print("New Version found ("..NewVersion.."). Please wait...") end
 	ToUpdate.CallbackError = function() self:Print("Error when checking update. Please test again.") end
-	ScriptUpdate(ToUpdate.Version, ToUpdate.UseHttps, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate, ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion, ToUpdate.CallbackError)
+	AutoUpdater(ToUpdate.Version, ToUpdate.UseHttps, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate, ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion, ToUpdate.CallbackError)
 end
 
 function RxXerath:Print(text)
@@ -487,206 +487,6 @@ function RxXerath:Print(text)
 end
 
 function RxXerath:Hello()
- PrintChat(string.format("<font color=\"#4169E1\"><b>[Rx Xerath]:</b></font><font color=\"#FFFFFF\"><i> Loaded Success</i></font><font color=\"#FFFFFF\"> | Good Luck <i>%s</i></font>",GetUser()))
+ PrintChat(string.format("<font color=\"#4169E1\"><b>[Rx Xerath]:</b></font><font color=\"#FFFFFF\"><i> Loaded Success</i></font><font color=\"#FFFFFF\"> | Good Luck <u>%s</u></font>",GetUser()))
 end
 if myHero.charName == "Xerath" then RxXerath() else PrintChat(string.format("<font color='#FFFFFF'>Script Not Supported for</font><font color='#8B008B'> %s</font>",myHero.charName)) end
-
------------------------------------
-class "ScriptUpdate"
-function ScriptUpdate:__init(LocalVersion, UseHttps, Host, VersionPath, ScriptPath, SavePath, CallbackUpdate, CallbackNoUpdate, CallbackNewVersion, CallbackError)
-    self.LocalVersion = LocalVersion
-    self.Host = Host
-    self.VersionPath = '/GOS/TCPUpdater/GetScript'..(UseHttps and '5' or '6')..'.php?script='..self:Base64Encode(self.Host..VersionPath)..'&rand='..math.random(99999999)
-    self.ScriptPath = '/GOS/TCPUpdater/GetScript'..(UseHttps and '5' or '6')..'.php?script='..self:Base64Encode(self.Host..ScriptPath)..'&rand='..math.random(99999999)
-    self.SavePath = SavePath
-    self.CallbackUpdate = CallbackUpdate
-    self.CallbackNoUpdate = CallbackNoUpdate
-    self.CallbackNewVersion = CallbackNewVersion
-    self.CallbackError = CallbackError
-    Callback.Add("Draw", function() self:OnDraw() end)
-    self:CreateSocket(self.VersionPath)
-    self.DownloadStatus = 'Connecting to Server for VersionInfo'
-    Callback.Add("Tick", function() self:GetOnlineVersion() end)
-end
-
-function ScriptUpdate:print(str)
-    print('<font color="#FFFFFF">'..os.clock()..': '..str)
-end
-
-function ScriptUpdate:OnDraw()
-local res = GetResolution()
-  if self.DownloadStatus ~= 'Downloading Script (100%)' and self.DownloadStatus ~= 'Downloading VersionInfo (100%)'then
-      local bP = {['x1'] = res.x - (res.x - 390),['x2'] = res.x - (res.x - 20),['y1'] = res.y / 2,['y2'] = (res.y / 2) + 20,}
-    local text = 'Download Status: '..(self.DownloadStatus or 'Unknown')
-    DrawLine(bP.x1, bP.y1 + 20, bP.x2,  bP.y1 + 20, 20, ARGB(125, 255, 255, 255))
-    local xOff
-      if self.File and self.Size then
-      local c = math.round(100/self.Size*self.File:len(),2)/100
-      xOff = c < 1 and math.ceil(370 * c) or 370
-    else
-      xOff = 1
-    end
-    local percent = 1 - xOff / 470
-    DrawLine(bP.x2 + xOff, bP.y1 + 20, bP.x2, bP.y1 + 20, 20, ARGB(255, 255 * percent, 255 - (255 * percent), 0))
-    DrawLines2({{x=bP.x1, y=bP.y1}, {x=bP.x2, y=bP.y1}, {x=bP.x2, y=bP.y2}, {x=bP.x1, y=bP.y2}, {x=bP.x1, y=bP.y1}, }, 3, ARGB(255, 0x0A, 0x0A, 0x0A))
-    DrawText(text, 16, res.x - (res.x - 205) - (GetTextArea(text, 16).x / 2), bP.y1 + 1, ARGB(255,10,10,10))
-  end
-end
-
-function ScriptUpdate:CreateSocket(url)
-    if not self.LuaSocket then
-        self.LuaSocket = require("socket")
-    else
-        self.Socket:close()
-        self.Socket = nil
-        self.Size = nil
-        self.RecvStarted = false
-    end
-    self.LuaSocket = require("socket")
-    self.Socket = self.LuaSocket.tcp()
-    self.Socket:settimeout(0, 'b')
-    self.Socket:settimeout(99999999, 't')
-    self.Socket:connect('plebleaks.com', 80)
-    self.Url = url
-    self.Started = false
-    self.LastPrint = ""
-    self.File = ""
-end
-
-function ScriptUpdate:Base64Encode(data)
-    local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    return ((data:gsub('.', function(x)
-        local r,b='',x:byte()
-        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return b:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
-end
-
-function ScriptUpdate:GetOnlineVersion()
-    if self.GotScriptVersion then return end
-
-    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
-    if self.Status == 'timeout' and not self.Started then
-        self.Started = true
-        self.Socket:send("GET "..self.Url.." HTTP/1.1\r\nHost: plebleaks.com\r\n\r\n")
-    end
-    if (self.Receive or (#self.Snipped > 0)) and not self.RecvStarted then
-        self.RecvStarted = true
-        self.DownloadStatus = 'Downloading VersionInfo (0%)'
-    end
-
-    self.File = self.File .. (self.Receive or self.Snipped)
-    if self.File:find('</s'..'ize>') then
-        if not self.Size then
-            self.Size = tonumber(self.File:sub(self.File:find('<si'..'ze>')+6,self.File:find('</si'..'ze>')-1))
-        end
-        if self.File:find('<scr'..'ipt>') then
-            local _,ScriptFind = self.File:find('<scr'..'ipt>')
-            local ScriptEnd = self.File:find('</scr'..'ipt>')
-            if ScriptEnd then ScriptEnd = ScriptEnd - 1 end
-            local DownloadedSize = self.File:sub(ScriptFind+1,ScriptEnd or -1):len()
-            self.DownloadStatus = 'Downloading VersionInfo ('..math.round(100/self.Size*DownloadedSize,2)..'%)'
-        end
-    end
-    if self.File:find('</scr'..'ipt>') then
-        self.DownloadStatus = 'Downloading VersionInfo (100%)'
-        local a,b = self.File:find('\r\n\r\n')
-        self.File = self.File:sub(a,-1)
-        self.NewFile = ''
-        for line,content in ipairs(self.File:split('\n')) do
-            if content:len() > 5 then
-                self.NewFile = self.NewFile .. content
-            end
-        end
-        local HeaderEnd, ContentStart = self.File:find('<scr'..'ipt>')
-        local ContentEnd, _ = self.File:find('</sc'..'ript>')
-        if not ContentStart or not ContentEnd then
-            if self.CallbackError and type(self.CallbackError) == 'function' then
-                self.CallbackError()
-            end
-        else
-            self.OnlineVersion = (Base64Decode(self.File:sub(ContentStart + 1,ContentEnd-1)))
-            self.OnlineVersion = tonumber(self.OnlineVersion)
-            if self.OnlineVersion > self.LocalVersion then
-                if self.CallbackNewVersion and type(self.CallbackNewVersion) == 'function' then
-                    self.CallbackNewVersion(self.OnlineVersion,self.LocalVersion)
-                end
-                self:CreateSocket(self.ScriptPath)
-                self.DownloadStatus = 'Connect to Server for ScriptDownload'
-                OnTick(function() self:DownloadUpdate() end)
-            else
-                if self.CallbackNoUpdate and type(self.CallbackNoUpdate) == 'function' then
-                    self.CallbackNoUpdate(self.LocalVersion)
-                end
-            end
-        end
-        self.GotScriptVersion = true
-    end
-end
-
-function ScriptUpdate:DownloadUpdate()
-    if self.GotScriptUpdate then return end
-    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
-    if self.Status == 'timeout' and not self.Started then
-        self.Started = true
-        self.Socket:send("GET "..self.Url.." HTTP/1.1\r\nHost: plebleaks.com\r\n\r\n")
-    end
-    if (self.Receive or (#self.Snipped > 0)) and not self.RecvStarted then
-        self.RecvStarted = true
-        self.DownloadStatus = 'Downloading Script (0%)'
-    end
-
-    self.File = self.File .. (self.Receive or self.Snipped)
-    if self.File:find('</si'..'ze>') then
-        if not self.Size then
-            self.Size = tonumber(self.File:sub(self.File:find('<si'..'ze>')+6,self.File:find('</si'..'ze>')-1))
-        end
-        if self.File:find('<scr'..'ipt>') then
-            local _,ScriptFind = self.File:find('<scr'..'ipt>')
-            local ScriptEnd = self.File:find('</scr'..'ipt>')
-            if ScriptEnd then ScriptEnd = ScriptEnd - 1 end
-            local DownloadedSize = self.File:sub(ScriptFind+1,ScriptEnd or -1):len()
-            self.DownloadStatus = 'Downloading Script ('..math.round(100/self.Size*DownloadedSize,2)..'%)'
-        end
-    end
-    if self.File:find('</scr'..'ipt>') then
-        self.DownloadStatus = 'Downloading Script (100%)' 
-        local a,b = self.File:find('\r\n\r\n')
-        self.File = self.File:sub(a,-1)
-        self.NewFile = ''
-        for line,content in ipairs(self.File:split('\n')) do
-            if content:len() > 5 then
-                self.NewFile = self.NewFile .. content
-            end
-        end
-        local HeaderEnd, ContentStart = self.NewFile:find('<sc'..'ript>')
-        local ContentEnd, _ = self.NewFile:find('</scr'..'ipt>')
-        if not ContentStart or not ContentEnd then
-            if self.CallbackError and type(self.CallbackError) == 'function' then
-                self.CallbackError()
-            end
-        else
-            local newf = self.NewFile:sub(ContentStart+1,ContentEnd-1)
-            local newf = newf:gsub('\r','')
-            if newf:len() ~= self.Size then
-                if self.CallbackError and type(self.CallbackError) == 'function' then
-                    self.CallbackError()
-                end
-                return
-            end
-            local newf = Base64Decode(newf)
-            local f = io.open(self.SavePath,"w+b")
-                f:write(newf)
-                f:close()
-                if self.CallbackUpdate and type(self.CallbackUpdate) == 'function' then
-                    self.CallbackUpdate(self.OnlineVersion,self.LocalVersion)
-                end
-        end
-        self.GotScriptUpdate = true
-    end
-end

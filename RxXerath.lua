@@ -102,14 +102,14 @@ function RxXerath:CreateMenu()
         self.cfg.misc.castCombo:Info("if", "Only Cast QWE if W or E Ready")
         self.cfg.misc.castCombo:Boolean("WE", "Enable? (default off)", false)
       self.cfg.misc:Menu("hc", "Spell HitChance")
-        self.cfg.misc.hc:Slider("Q", "Q Hit-Chance", 2.5, 1, 10, 0.5)
-        self.cfg.misc.hc:Slider("W", "W Hit-Chance", 2.5, 1, 10, 0.5)
-        self.cfg.misc.hc:Slider("E", "E Hit-Chance", 2.5, 1, 10, 0.5)
-        self.cfg.misc.hc:Slider("R", "R Hit-Chance", 4, 1, 10, 0.5)
+        self.cfg.misc.hc:Slider("Q", "Q Hit-Chance", 25, 1, 100, 1)
+        self.cfg.misc.hc:Slider("W", "W Hit-Chance", 25, 1, 100, 1)
+        self.cfg.misc.hc:Slider("E", "E Hit-Chance", 30, 1, 100, 1)
+        self.cfg.misc.hc:Slider("R", "R Hit-Chance", 40, 1, 100, 1)
       self.cfg.misc:Menu("delay", "R Casting Delays")
-        self.cfg.misc.delay:Slider("c1", "Delay CastR 1", 75, 0, 1000, 5)
-        self.cfg.misc.delay:Slider("c2", "Delay CastR 2", 170, 0, 1000, 5)
-        self.cfg.misc.delay:Slider("c3", "Delay CastR 3", 110, 0, 1000, 5)
+        self.cfg.misc.delay:Slider("c1", "Delay CastR 1 (ms)", 75, 0, 1000, 1)
+        self.cfg.misc.delay:Slider("c2", "Delay CastR 2 (ms)", 170, 0, 1000, 1)
+        self.cfg.misc.delay:Slider("c3", "Delay CastR 3 (ms)", 110, 0, 1000, 1)
       self.cfg.misc:Menu("Interrupt", "Interrupt With E")
       self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")
 
@@ -168,7 +168,7 @@ function RxXerath:Fight(myHero)
     self.R.Count = 3
     if IOW:Mode() == "Combo" then
      if self.cfg.misc.castCombo.WE:Value() then
-      if not myHero:CanUseSpell(_W) == 5 or not myHero:CanUseSpell(_E) == 5 then
+      if myHero:CanUseSpell(_W) ~= 5 or myHero:CanUseSpell(_E) ~= 5 then
        if IsReady(_E) and self.cfg.cb.E:Value() and ETarget then self:CastE(ETarget) end
        if IsReady(_W) and self.cfg.cb.W:Value() and WTarget then self:CastW(WTarget) end
        if IsReady(_Q) and self.cfg.cb.Q:Value() and QTarget then self:CastQ(QTarget) end
@@ -229,7 +229,7 @@ end
 function RxXerath:CastR(target)
     if target == nil then return end
     local Pos, CanCast, hc = self:SpellPrediction(_R, target)
-    if CanCast and hc >= self.cfg.misc.hc.R:Value()/10 then
+    if CanCast and hc >= self.cfg.misc.hc.R:Value()/100 then
      CastSkillShot(_R, Pos)
     end
 end
@@ -240,7 +240,7 @@ function RxXerath:CastQ(target)
       CastSkillShot(_Q, GetMousePos())
     else
     local Pos, CanCast, hc = self:SpellPrediction(_Q, target)
-     if IsInRange(target, self.Q.Range) and GetDistance(Pos) <= self.Q.Range and CanCast and hc >= self.cfg.misc.hc.Q:Value()/10 then
+     if IsInRange(target, self.Q.Range) and GetDistance(Pos) <= self.Q.Range and CanCast and hc >= self.cfg.misc.hc.Q:Value()/100 then
        CastSkillShot2(_Q, Pos)
      end
     end
@@ -249,13 +249,13 @@ end
 function RxXerath:CastW(target)
    if not IsInRange(target, self.W.Range) then return end
 	local Pos, CanCast, hc = self:SpellPrediction(_W, target)
-	if CanCast and hc >= self.cfg.misc.hc.W:Value()/10 then CastSkillShot(_W, Pos) end
+	if CanCast and hc >= self.cfg.misc.hc.W:Value()/100 then CastSkillShot(_W, Pos) end
 end
 
 function RxXerath:CastE(target)
    if not IsInRange(target, self.E.Range) then return end
 	local Pos, CanCast, hc = self:SpellPrediction(_E, target)
-	if CanCast and hc >= self.cfg.misc.hc.E:Value()/10 then CastSkillShot(_E, Pos) end
+	if CanCast and hc >= self.cfg.misc.hc.E:Value()/100 then CastSkillShot(_E, Pos) end
 end
 
 function RxXerath:LaneClear()
@@ -319,7 +319,7 @@ function RxXerath:AutoE(unit, spell)
      if CHANELLING_SPELLS[spell.name] then
       if IsInRange(unit, self.E.Range) and unit.charName == CHANELLING_SPELLS[spell.name].Name and self.cfg.misc.Interrupt[unit.charName.."Inter"]:Value() then 
       local pos, CanCast, hc = self:SpellPrediction(_E, unit)
-       if CanCast and hc >= self.cfg.misc.hc.E:Value()/10 then myHero:Cast(_E, pos) end
+       if CanCast and hc >= self.cfg.misc.hc.E:Value()/100 then myHero:Cast(_E, pos) end
       end
      end
     end
@@ -487,7 +487,7 @@ function RxXerath:Print(text)
 end
 
 function RxXerath:Hello()
- PrintChat(string.format("<font color=\"#4169E1\"><b>[Rx Xerath]:</b></font><font color=\"#FFFFFF\"><i> Loaded Success</i></font><font color=\"#FFFFFF\"> | Good Luck %s</font>",GetUser()))
+ PrintChat(string.format("<font color=\"#4169E1\"><b>[Rx Xerath]:</b></font><font color=\"#FFFFFF\"><i> Loaded Success</i></font><font color=\"#FFFFFF\"> | Good Luck <i>%s</i></font>",GetUser()))
 end
 if myHero.charName == "Xerath" then RxXerath() else PrintChat(string.format("<font color='#FFFFFF'>Script Not Supported for</font><font color='#8B008B'> %s</font>",myHero.charName)) end
 

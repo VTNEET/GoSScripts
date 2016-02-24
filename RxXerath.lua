@@ -23,7 +23,7 @@ end
 function RxXerath:LoadValues()
  Ignite = (GetCastName(myHero, SUMMONER_1):lower():find("summonerdot") and SUMMONER_1 or (GetCastName(myHero, SUMMONER_2):lower():find("summonerdot") and SUMMONER_2 or nil))
  self.data = function(spell) return myHero:GetSpellData(spell) end
- self.Q = { Range = 0, minRange = 750, maxRange = 1500,                       Speed = math.huge, Delay = 0.555,  Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
+ self.Q = { Range = 0, minRange = 750, maxRange = 1500,                       Speed = math.huge, Delay = 0.575,  Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
  self.W = { Range = self.data(_W).range,                                      Speed = math.huge, Delay = 0.675, Width = 200, Damage = function(unit) return myHero:CalcMagicDamage(unit, 30 + 30*self.data(_W).level + 0.6*myHero.ap) end}
  self.E = { Range = self.data(_E).range,                                      Speed = 1200,      Delay = 0.5,  Width = 60,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
  self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Width = 140, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 50*self.data(_R).level + 0.433*myHero.ap) end, Activating = false, LastCastTime = 0, Count = 3, Delay1 = 0, Delay2 = 0, Delay3 = 0}
@@ -108,8 +108,8 @@ function RxXerath:CreateMenu()
         self.cfg.misc.hc:Slider("R", "R Hit-Chance", 4, 1, 10, 0.5)
       self.cfg.misc:Menu("delay", "R Casting Delays")
         self.cfg.misc.delay:Slider("c1", "Delay CastR 1", 75, 0, 1000, 5)
-        self.cfg.misc.delay:Slider("c2", "Delay CastR 2", 200, 0, 1000, 5)
-        self.cfg.misc.delay:Slider("c3", "Delay CastR 3", 100, 0, 1000, 5)
+        self.cfg.misc.delay:Slider("c2", "Delay CastR 2", 170, 0, 1000, 5)
+        self.cfg.misc.delay:Slider("c3", "Delay CastR 3", 110, 0, 1000, 5)
       self.cfg.misc:Menu("Interrupt", "Interrupt With E")
       self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")
 

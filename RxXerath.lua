@@ -107,9 +107,9 @@ function RxXerath:CreateMenu()
         self.cfg.misc.hc:Slider("E", "E Hit-Chance", 30, 1, 100, 1)
         self.cfg.misc.hc:Slider("R", "R Hit-Chance", 40, 1, 100, 1)
       self.cfg.misc:Menu("delay", "R Casting Delays")
-        self.cfg.misc.delay:Slider("c1", "Delay CastR 1 (ms)", 75, 0, 1000, 1)
-        self.cfg.misc.delay:Slider("c2", "Delay CastR 2 (ms)", 170, 0, 1000, 1)
-        self.cfg.misc.delay:Slider("c3", "Delay CastR 3 (ms)", 110, 0, 1000, 1)
+        self.cfg.misc.delay:Slider("c1", "Delay CastR 1 (ms)", 200, 0, 1000, 1)
+        self.cfg.misc.delay:Slider("c2", "Delay CastR 2 (ms)", 250, 0, 1000, 1)
+        self.cfg.misc.delay:Slider("c3", "Delay CastR 3 (ms)", 250, 0, 1000, 1)
       self.cfg.misc:Menu("Interrupt", "Interrupt With E")
       self.cfg.misc:Menu("GapClose", "Anti-GapClose With E")
 
@@ -234,7 +234,7 @@ function RxXerath:Fight(myHero)
     self.R.Count = 3
     if IOW:Mode() == "Combo" then
      if self.cfg.misc.castCombo.WE:Value() then
-      if myHero:CanUseSpell(_W) ~= 5 or myHero:CanUseSpell(_E) ~= 5 then
+      if IsReady(_W) or IsReady(_E) then
        if IsReady(_E) and self.cfg.cb.E:Value() and ETarget then self:CastE(ETarget) end
        if IsReady(_W) and self.cfg.cb.W:Value() and WTarget then self:CastW(WTarget) end
        if IsReady(_Q) and self.cfg.cb.Q:Value() and QTarget then self:CastQ(QTarget) end
@@ -294,9 +294,9 @@ function RxXerath:LaneClear()
      end
     end
 end
-
 function RxXerath:JungleClear()
-    for _, mob in pairs(minionManager.objects) do
+    for M=1, minionManager.maxObjects do
+    local mob = minionManager.objects[M]
      if mob.team == MINION_JUNGLE and mob.health > 0 and IsInRange(mob, 1500) then
       if IsReady(_W) and self.cfg.jc.W:Value() and IsInRange(mob, self.W.Range) then
        CastSkillShot(_W, GetCircularAOEPrediction(mob, { delay = self.W.Delay, speed = self.W.Speed, width = self.W.Width, range = self.W.Range }).castPos)
@@ -337,7 +337,7 @@ function RxXerath:RKillable()
     for i, enemy in pairs(GetEnemyHeroes()) do
      i = i+1
      if IsInRange(enemy, self.R.Range()) and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.R.Damage(enemy) * self.R.Count then
-      DrawText(enemy.charName.." R Killable", 30, GetResolution().x/80, GetResolution().y/6+i*15, GoS.Red)
+      DrawText(enemy.charName.." R Killable", 30, GetResolution().x/80, GetResolution().y/7+i*26, GoS.Red)
      end
     end
 end
@@ -418,10 +418,10 @@ function RxXerath:SpellPrediction(spell, unit)
     return Position, CanCast, HitChance
 end
 
-function RxXerath:GetRTarget(pos, r)
+function RxXerath:GetRTarget(pos, range)
     local RTarget = nil
      for i, enemy in pairs(GetEnemyHeroes()) do
-      if IsInRange(enemy, 2000 + 1200*myHero:GetSpellData(_R).level) and GetDistanceSqr(pos, enemy) <= r*r then
+      if IsInRange(enemy, 2000 + 1200*myHero:GetSpellData(_R).level) and GetDistanceSqr(pos, enemy) <= range * range then
        if RTarget == nil then
                  RTarget = enemy
        elseif enemy.health - self.R.Damage(enemy) * self.R.Count < RTarget.health - self.R.Damage(RTarget) * self.R.Count then
@@ -465,18 +465,18 @@ function RxXerath:RemoveBuff(unit, buff)
 end
 
 function RxXerath:CheckUpdate()
-	ToUpdate = {}
-	ToUpdate.Version = self.Version
-	ToUpdate.UseHttps = true
-	ToUpdate.Host = "raw.githubusercontent.com"
-	ToUpdate.VersionPath = "/VTNEET/GoSScripts/master/Version/RxXerath.version"
-	ToUpdate.ScriptPath = "/VTNEET/GoSScripts/master/RxXerath.lua"
-	ToUpdate.SavePath = SCRIPT_PATH.."/RxXerath.lua"
-	ToUpdate.CallbackUpdate = function(NewVersion) self:Print("Updated to "..NewVersion..". Please F6 x2 to reload.") end
-	ToUpdate.CallbackNoUpdate = function(NewVersion) self:Print("You are using Lastest Version ("..NewVersion..")") self:Hello() end
-	ToUpdate.CallbackNewVersion = function(NewVersion) self:Print("New Version found ("..NewVersion.."). Please wait...") end
-	ToUpdate.CallbackError = function() self:Print("Error when checking update. Please test again.") end
-	AutoUpdater(ToUpdate.Version, ToUpdate.UseHttps, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate, ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion, ToUpdate.CallbackError)
+	self.Update = {}
+	self.Update.LocalVersion = self.Version
+	self.Update.UseHttps = true
+	self.Update.Host = "raw.githubusercontent.com"
+	self.Update.VersionPath = "/VTNEET/GoSScripts/master/Version/RxXerath.version"
+	self.Update.ScriptPath = "/VTNEET/GoSScripts/master/RxXerath.lua"
+	self.Update.SavePath = SCRIPT_PATH.."/RxXerath.lua"
+	self.Update.CallbackUpdate = function(NewVersion) self:Print("Updated to "..NewVersion..". Please F6 x2 to reload.") end
+	self.Update.CallbackNoUpdate = function(NewVersion) self:Print("You are using Lastest Version ("..NewVersion..")") self:Hello() end
+	self.Update.CallbackNewVersion = function(NewVersion) self:Print("New Version found ("..NewVersion.."). Please wait...") end
+	self.Update.CallbackError = function() self:Print("Error when checking update. Please try again.") end
+	AutoUpdater(self.Update.LocalVersion, self.Update.UseHttps, self.Update.Host, self.Update.VersionPath, self.Update.ScriptPath, self.Update.SavePath, self.Update.CallbackUpdate, self.Update.CallbackNoUpdate, self.Update.CallbackNewVersion, self.Update.CallbackError)
 end
 
 function RxXerath:Print(text)

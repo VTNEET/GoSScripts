@@ -23,9 +23,9 @@ end
 function RxXerath:LoadValues()
  Ignite = (GetCastName(myHero, SUMMONER_1):lower():find("summonerdot") and SUMMONER_1 or (GetCastName(myHero, SUMMONER_2):lower():find("summonerdot") and SUMMONER_2 or nil))
  self.data = function(spell) return myHero:GetSpellData(spell) end
- self.Q = { Range = 0, minRange = 750, maxRange = 1500,                       Speed = math.huge, Delay = 0.575,  Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
+ self.Q = { Range = 0, minRange = 750, maxRange = 1500,                       Speed = math.huge, Delay = 0.575, Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
  self.W = { Range = self.data(_W).range,                                      Speed = math.huge, Delay = 0.675, Width = 200, Damage = function(unit) return myHero:CalcMagicDamage(unit, 30 + 30*self.data(_W).level + 0.6*myHero.ap) end}
- self.E = { Range = self.data(_E).range,                                      Speed = 1200,      Delay = 0.5,  Width = 60,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
+ self.E = { Range = self.data(_E).range,                                      Speed = 1200,      Delay = 0.5,   Width = 60,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
  self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Width = 140, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 55*self.data(_R).level + 0.433*myHero.ap) end, Activating = false, LastCastTime = 0, Count = 3, Delay1 = 0, Delay2 = 0, Delay3 = 0}
  QT = TargetSelector(self.Q.maxRange, 8, DAMAGE_MAGIC)
  WT = TargetSelector(self.W.Range, 8, DAMAGE_MAGIC)
@@ -126,6 +126,38 @@ function RxXerath:CreateMenu()
     AddGapcloseEvent(_E, myHero:GetSpellData(_E).range, false, self.cfg.misc.GapClose)
 end
 
+function RxXerath:CastR(target)
+    if target == nil then return end
+    local Pos, CanCast, hc = self:SpellPrediction(_R, target)
+    if CanCast and hc >= self.cfg.misc.hc.R:Value()/100 then
+     CastSkillShot(_R, Pos)
+    end
+end
+
+function RxXerath:CastQ(target)
+   if not IsInRange(target, self.Q.maxRange) then return end
+    if self.Q.Charging == false then
+      CastSkillShot(_Q, GetMousePos())
+    else
+    local Pos, CanCast, hc = self:SpellPrediction(_Q, target)
+     if IsInRange(target, self.Q.Range) and GetDistance(Pos) <= self.Q.Range and CanCast and hc >= self.cfg.misc.hc.Q:Value()/100 then
+       CastSkillShot2(_Q, Pos)
+     end
+    end
+end
+
+function RxXerath:CastW(target)
+   if not IsInRange(target, self.W.Range) then return end
+	local Pos, CanCast, hc = self:SpellPrediction(_W, target)
+	if CanCast and hc >= self.cfg.misc.hc.W:Value()/100 then CastSkillShot(_W, Pos) end
+end
+
+function RxXerath:CastE(target)
+   if not IsInRange(target, self.E.Range) then return end
+	local Pos, CanCast, hc = self:SpellPrediction(_E, target)
+	if CanCast and hc >= self.cfg.misc.hc.E:Value()/100 then CastSkillShot(_E, Pos) end
+end
+
 function RxXerath:CheckingValues()
     if self.Q.Charging == false then
      if self.Q.Range ~= self.Q.minRange then self.Q.Range = self.Q.minRange end
@@ -145,6 +177,40 @@ function RxXerath:CheckingValues()
      self:CheckRCasting()
      if EnemiesAround(myHero.pos, 1500) == 0 then IOW.movementEnabled = false IOW.attacksEnabled = false else IOW.movementEnabled = true IOW.attacksEnabled = true end
      end
+    end
+end
+
+function RxXerath:CheckRDelay(target)
+    if self.R.Count == 3 and os.clock() - self.R.Delay1 > self.cfg.misc.delay.c1:Value()/1000 then
+     self:CastR(target)
+    elseif self.R.Count == 2 and os.clock() - self.R.Delay2 > self.cfg.misc.delay.c2:Value()/1000 then
+     self:CastR(target)
+    elseif self.R.Count == 1 and os.clock() - self.R.Delay3 > self.cfg.misc.delay.c3:Value()/1000 then
+     self:CastR(target)
+	end
+end
+
+function RxXerath:CheckRUsing()
+   if not IsReady(_R) then return end
+    if self.cfg.ult.use.mode:Value() == 2 then
+     local target = self:GetRTarget(myHero.pos, self.R.Range())
+     if (target.health + target.shieldAD + target.shieldAP) < self.R.Damage(target) * self.R.Count then
+      CastSpell(_R)
+     end
+    end
+end
+
+function RxXerath:CheckRCasting()
+    if self.cfg.ult.cast.mode:Value() < 3 then
+    local target = self:GetRTarget(myHero.pos, self.R.Range())
+     if self.cfg.ult.cast.mode:Value() == 1 and self.cfg.ult.cast.key:Value() then
+      self:CheckRDelay(target)
+     elseif self.cfg.ult.cast.mode:Value() == 2 then
+      self:CheckRDelay(target)
+     end
+    else
+    local target = self:GetRTarget(GetMousePos(), self.cfg.ult.cast.range:Value())
+      self:CheckRDelay(target)
     end
 end
 
@@ -192,70 +258,24 @@ function RxXerath:Fight(myHero)
     if self.cfg.ks.Enable:Value() <= GetPercentMP(myHero) then self:KillSteal() end
 end
 
-function RxXerath:CheckRUsing()
-   if not IsReady(_R) then return end
-    if self.cfg.ult.use.mode:Value() == 2 then
-     local target = self:GetRTarget(myHero.pos, self.R.Range())
-     if (target.health + target.shieldAD + target.shieldAP) < self.R.Damage(target) * self.R.Count then
-      CastSpell(_R)
+function RxXerath:KillSteal()
+    for i, enemy in pairs(GetEnemyHeroes()) do	
+     if self.Ignite and self.cfg.ks.ignite:Value() and IsReady(self.Ignite) and 20*GetLevel(myHero)+50 > (enemy.health + enemy.shieldAD) + enemy.hpRegen*2.5 and IsInRange(enemy, 600) then
+      CastTargetSpell(enemy, self.Ignite)
+     end
+
+     if IsReady(_E) and self.cfg.ks.E:Value() and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.E.Damage(enemy) then 
+      self:CastE(enemy)
+     end
+
+     if IsReady(_W) and self.cfg.ks.W:Value() and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.W.Damage(enemy) then 
+      self:CastW(enemy)
+     end
+
+     if IsReady(_Q) and self.cfg.ks.Q:Value() and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.Q.Damage(enemy) then 
+      self:CastQ(enemy)
      end
     end
-end
-
-function RxXerath:CheckRCasting()
-    if self.cfg.ult.cast.mode:Value() < 3 then
-    local target = self:GetRTarget(myHero.pos, self.R.Range())
-     if self.cfg.ult.cast.mode:Value() == 1 and self.cfg.ult.cast.key:Value() then
-      self:CheckRDelay(target)
-     elseif self.cfg.ult.cast.mode:Value() == 2 then
-      self:CheckRDelay(target)
-     end
-    else
-    local target = self:GetRTarget(GetMousePos(), self.cfg.ult.cast.range:Value())
-      self:CheckRDelay(target)
-    end
-end
-
-function RxXerath:CheckRDelay(target)
-    if self.R.Count == 3 and os.clock() - self.R.Delay1 > self.cfg.misc.delay.c1:Value()/1000 then
-     self:CastR(target)
-    elseif self.R.Count == 2 and os.clock() - self.R.Delay2 > self.cfg.misc.delay.c2:Value()/1000 then
-     self:CastR(target)
-    elseif self.R.Count == 1 and os.clock() - self.R.Delay3 > self.cfg.misc.delay.c3:Value()/1000 then
-     self:CastR(target)
-	end
-end
-
-function RxXerath:CastR(target)
-    if target == nil then return end
-    local Pos, CanCast, hc = self:SpellPrediction(_R, target)
-    if CanCast and hc >= self.cfg.misc.hc.R:Value()/100 then
-     CastSkillShot(_R, Pos)
-    end
-end
-
-function RxXerath:CastQ(target)
-   if not IsInRange(target, self.Q.maxRange) then return end
-    if self.Q.Charging == false then
-      CastSkillShot(_Q, GetMousePos())
-    else
-    local Pos, CanCast, hc = self:SpellPrediction(_Q, target)
-     if IsInRange(target, self.Q.Range) and GetDistance(Pos) <= self.Q.Range and CanCast and hc >= self.cfg.misc.hc.Q:Value()/100 then
-       CastSkillShot2(_Q, Pos)
-     end
-    end
-end
-
-function RxXerath:CastW(target)
-   if not IsInRange(target, self.W.Range) then return end
-	local Pos, CanCast, hc = self:SpellPrediction(_W, target)
-	if CanCast and hc >= self.cfg.misc.hc.W:Value()/100 then CastSkillShot(_W, Pos) end
-end
-
-function RxXerath:CastE(target)
-   if not IsInRange(target, self.E.Range) then return end
-	local Pos, CanCast, hc = self:SpellPrediction(_E, target)
-	if CanCast and hc >= self.cfg.misc.hc.E:Value()/100 then CastSkillShot(_E, Pos) end
 end
 
 function RxXerath:LaneClear()
@@ -293,26 +313,6 @@ function RxXerath:JungleClear()
     end
 end
 
-function RxXerath:KillSteal()
-    for i, enemy in pairs(GetEnemyHeroes()) do	
-     if self.Ignite and self.cfg.ks.ignite:Value() and IsReady(self.Ignite) and 20*GetLevel(myHero)+50 > (enemy.health + enemy.shieldAD) + enemy.hpRegen*2.5 and IsInRange(enemy, 600) then
-      CastTargetSpell(enemy, self.Ignite)
-     end
-
-     if IsReady(_E) and self.cfg.ks.E:Value() and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.E.Damage(enemy) then 
-      self:CastE(enemy)
-     end
-
-     if IsReady(_W) and self.cfg.ks.W:Value() and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.W.Damage(enemy) then 
-      self:CastW(enemy)
-     end
-
-     if IsReady(_Q) and self.cfg.ks.Q:Value() and (enemy.health + enemy.shieldAD + enemy.shieldAP) < self.Q.Damage(enemy) then 
-      self:CastQ(enemy)
-     end
-    end
-end
-
 function RxXerath:AutoE(unit, spell)
    if self.R.Activating then return end
     if unit.type == myHero.type and unit.team ~= myHero.team then
@@ -343,9 +343,6 @@ function RxXerath:RKillable()
 end
 
 function RxXerath:DrawRRange()
-local Q, R = nil, nil
-if self.R.Activating == true then R = "R Active" else R = "R Not Active" end
-if self.Q.Charging == true then Q = "Q Active" else Q = "Q Not Active" end
     if not IsReady(_R) then return end
     if self.cfg.dw.R:Value() then DrawCircleMinimap(myHero.pos, self.R.Range(), 1, 120, 0x20FFFF00) end
 end

@@ -8,7 +8,7 @@ require('OpenPredict')
 
 class "RxXerath"
 function RxXerath:__init()
- self.Version = 0.01
+ self.ScriptVersion = 0.01
  self:CreateMenu()
  self:LoadValues()
  Callback.Add("Tick", function(myHero) self:Fight(myHero) end)
@@ -21,9 +21,9 @@ function RxXerath:__init()
 end
 
 function RxXerath:LoadValues()
- Ignite = (GetCastName(myHero, SUMMONER_1):lower():find("summonerdot") and SUMMONER_1 or (GetCastName(myHero, SUMMONER_2):lower():find("summonerdot") and SUMMONER_2 or nil))
+ self.Ignite = (GetCastName(myHero, SUMMONER_1):lower():find("summonerdot") and SUMMONER_1 or (GetCastName(myHero, SUMMONER_2):lower():find("summonerdot") and SUMMONER_2 or nil))
  self.data = function(spell) return myHero:GetSpellData(spell) end
- self.Q = { Range = 0, minRange = 750, maxRange = 1500,                       Speed = math.huge, Delay = 0.575, Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
+ self.Q = { Range = 0, minRange = 750, maxRange = 1500, Range2 = 0,           Speed = math.huge, Delay = 0.575, Width = 100, Damage = function(unit) return myHero:CalcMagicDamage(unit, 40 + 40*self.data(_Q).level + 0.75*myHero.ap) end, Charging = false, LastCastTime = 0}
  self.W = { Range = self.data(_W).range,                                      Speed = math.huge, Delay = 0.675, Width = 200, Damage = function(unit) return myHero:CalcMagicDamage(unit, 30 + 30*self.data(_W).level + 0.6*myHero.ap) end}
  self.E = { Range = self.data(_E).range,                                      Speed = 1200,      Delay = 0.5,   Width = 60,  Damage = function(unit) return myHero:CalcMagicDamage(unit, 50 + 30*self.data(_E).level + 0.45*myHero.ap) end}
  self.R = { Range = function() return 2000 + 1200*self.data(_R).level end,    Speed = math.huge, Delay = 0.675, Width = 140, Damage = function(unit) return myHero:CalcMagicDamage(unit, 135 + 55*self.data(_R).level + 0.433*myHero.ap) end, Activating = false, LastCastTime = 0, Count = 3, Delay1 = 0, Delay2 = 0, Delay3 = 0}
@@ -130,7 +130,13 @@ function RxXerath:CastR(target)
     if target == nil then return end
     local Pos, CanCast, hc = self:SpellPrediction(_R, target)
     if CanCast and hc >= self.cfg.misc.hc.R:Value()/100 then
-     CastSkillShot(_R, Pos)
+     if self.R.Count == 3 and os.clock() - self.R.Delay1 > self.cfg.misc.delay.c1:Value()/1000 then
+      CastSkillShot(_R, Pos)
+     elseif self.R.Count == 2 and os.clock() - self.R.Delay2 > self.cfg.misc.delay.c2:Value()/1000 then
+      CastSkillShot(_R, Pos)
+     elseif self.R.Count == 1 and os.clock() - self.R.Delay3 > self.cfg.misc.delay.c3:Value()/1000 then
+      CastSkillShot(_R, Pos)
+     end
     end
 end
 
@@ -140,7 +146,7 @@ function RxXerath:CastQ(target)
       CastSkillShot(_Q, GetMousePos())
     else
     local Pos, CanCast, hc = self:SpellPrediction(_Q, target)
-     if IsInRange(target, self.Q.Range) and GetDistance(Pos) <= self.Q.Range and CanCast and hc >= self.cfg.misc.hc.Q:Value()/100 then
+     if GetDistance(Pos) <= self.Q.Range2 and CanCast and hc >= self.cfg.misc.hc.Q:Value()/100 then
        CastSkillShot2(_Q, Pos)
      end
     end
@@ -158,36 +164,32 @@ function RxXerath:CastE(target)
 	if CanCast and hc >= self.cfg.misc.hc.E:Value()/100 then CastSkillShot(_E, Pos) end
 end
 
-function RxXerath:CheckingValues()
-    if self.Q.Charging == false then
-     if self.Q.Range ~= self.Q.minRange then self.Q.Range = self.Q.minRange end
-    else
-     self.Q.Range = math.min(self.Q.minRange-25 + (os.clock() - self.Q.LastCastTime)*500, self.Q.maxRange)
+function RxXerath:UpdateValues()
+    if IsReady(_Q) then
+     if self.Q.Charging == false then
+      if self.Q.Range ~= self.Q.minRange then self.Q.Range = self.Q.minRange end
+      if self.Q.Range2 ~= self.Q.minRange then self.Q.Range2 = self.Q.minRange end
+     else
+      self.Q.Range = math.min(self.Q.minRange + (os.clock() - self.Q.LastCastTime)*500, self.Q.maxRange)
+      self.Q.Range2 = math.min(self.Q.minRange-20 + (os.clock() - self.Q.LastCastTime)*500, self.Q.maxRange)
+     end
     end
     if IsReady(_R) then
      if self.R.Activating == false then
-     self.R.Count = 3
-     self.R.Delay1 = 0
-     self.R.Delay2 = 0
-     self.R.Delay3 = 0
-     self:CheckRUsing()
-     IOW.movementEnabled = true
-     IOW.attacksEnabled = true
+      self:CheckRUsing()
+      IOW.movementEnabled = true
+      IOW.attacksEnabled = true
 	 else
-     self:CheckRCasting()
-     if EnemiesAround(myHero.pos, 1500) == 0 then IOW.movementEnabled = false IOW.attacksEnabled = false else IOW.movementEnabled = true IOW.attacksEnabled = true end
+      self:CheckRCasting()
+      if EnemiesAround(myHero.pos, 1500) == 0 then
+      IOW.movementEnabled = false
+      IOW.attacksEnabled = false
+      else
+      IOW.movementEnabled = true
+      IOW.attacksEnabled = true
+      end
      end
     end
-end
-
-function RxXerath:CheckRDelay(target)
-    if self.R.Count == 3 and os.clock() - self.R.Delay1 > self.cfg.misc.delay.c1:Value()/1000 then
-     self:CastR(target)
-    elseif self.R.Count == 2 and os.clock() - self.R.Delay2 > self.cfg.misc.delay.c2:Value()/1000 then
-     self:CastR(target)
-    elseif self.R.Count == 1 and os.clock() - self.R.Delay3 > self.cfg.misc.delay.c3:Value()/1000 then
-     self:CastR(target)
-	end
 end
 
 function RxXerath:CheckRUsing()
@@ -204,13 +206,13 @@ function RxXerath:CheckRCasting()
     if self.cfg.ult.cast.mode:Value() < 3 then
     local target = self:GetRTarget(myHero.pos, self.R.Range())
      if self.cfg.ult.cast.mode:Value() == 1 and self.cfg.ult.cast.key:Value() then
-      self:CheckRDelay(target)
+      self:CastR(target)
      elseif self.cfg.ult.cast.mode:Value() == 2 then
-      self:CheckRDelay(target)
+      self:CastR(target)
      end
     else
     local target = self:GetRTarget(GetMousePos(), self.cfg.ult.cast.range:Value())
-      self:CheckRDelay(target)
+      self:CastR(target)
     end
 end
 
@@ -228,7 +230,7 @@ end
 
 function RxXerath:Fight(myHero)
    if myHero.dead then return end
-    self:CheckingValues()
+    self:UpdateValues()
     if self.R.Activating then return end
     QTarget, WTarget, ETarget = QT:GetTarget(), WT:GetTarget(), ET:GetTarget()
     self.R.Count = 3
@@ -280,11 +282,11 @@ end
 
 function RxXerath:LaneClear()
     if IsReady(_W) then
-    local WPos, WHit = GetFarmPosition(self.W.Range, self.W.Width, MINION_ENEMY)
+    local WPos, WHit = GetFarmPosition2(self.W.Range, self.W.Width)
        if WHit >= self.cfg.lc.W:Value() then CastSkillShot(_W, WPos) end
     end
     if IsReady(_Q) then
-    local QPos, QHit = GetLineFarmPosition(self.Q.maxRange, self.Q.Width, MINION_ENEMY)
+    local QPos, QHit = GetLineFarmPosition2(self.Q.maxRange, self.Q.Width)
      if self.Q.Charging == false then
        if QHit >= self.cfg.lc.Q:Value() then CastSkillShot(_Q, GetMousePos()) end
      else
@@ -294,20 +296,22 @@ function RxXerath:LaneClear()
      end
     end
 end
+
 function RxXerath:JungleClear()
     for M=1, minionManager.maxObjects do
     local mob = minionManager.objects[M]
-     if mob.team == MINION_JUNGLE and mob.health > 0 and IsInRange(mob, 1500) then
-      if IsReady(_W) and self.cfg.jc.W:Value() and IsInRange(mob, self.W.Range) then
+     if mob.team == MINION_JUNGLE and mob.health > 0 and IsInRange(mob, self.Q.maxRange, MINION_JUNGLE) then
+      if IsReady(_W) and self.cfg.jc.W:Value() and IsInRange(mob, self.W.Range, MINION_JUNGLE) then
        CastSkillShot(_W, GetCircularAOEPrediction(mob, { delay = self.W.Delay, speed = self.W.Speed, width = self.W.Width, range = self.W.Range }).castPos)
       end
-      if IsReady(_E) and self.cfg.jc.E:Value() and IsInRange(mob, self.E.Range) then
+      if IsReady(_E) and self.cfg.jc.E:Value() and IsInRange(mob, self.E.Range, MINION_JUNGLE) then
        CastSkillShot(_E, GetLinearAOEPrediction(mob, { delay = self.E.Delay, speed = self.E.Speed, width = self.E.Width, range = self.E.Range }).castPos)
       end
       if IsReady(_Q) and self.cfg.jc.Q:Value() and not self.Q.Charging then
        CastSkillShot(_Q, GetMousePos())
-      elseif IsReady(_Q) and self.cfg.jc.Q:Value() and self.Q.Charging and GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange }) and GetDistance(GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange }).castPos) <= self.Q.Range then
-       CastSkillShot2(_Q, GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange }).castPos)
+      elseif IsReady(_Q) and self.cfg.jc.Q:Value() and self.Q.Charging then
+       local QPred = GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange })
+       if QPred and GetDistance(Vector(QPred.castPos)) <= self.Q.Range then CastSkillShot2(_Q, QPred.castPos) end
       end
      end
     end
@@ -361,10 +365,10 @@ end
 function RxXerath:DmgHPBar()
     for i, enemy in pairs(GetEnemyHeroes()) do
      if IsInRange(enemy, self.R.Range()) then
-      if IsReady(_Q) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.Q.Damage(enemy), enemy.health), GoS.White) end
-      if IsReady(_W) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.W.Damage(enemy), enemy.health), GoS.White) end
-      if IsReady(_E) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.E.Damage(enemy), enemy.health), GoS.White) end
-      if IsReady(_R) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.R.Damage(enemy) * self.R.Count, enemy.health), GoS.White) end
+      if IsReady(_Q) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.Q.Damage(enemy), enemy.health), 0x9000F5FF) end
+      if IsReady(_W) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.W.Damage(enemy), enemy.health), 0x80BA55D3) end
+      if IsReady(_E) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.E.Damage(enemy), enemy.health), 0x70FF7F24) end
+      if IsReady(_R) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.R.Damage(enemy) * self.R.Count, enemy.health), 0x60FFFF00) end
      end
     end
 end
@@ -396,7 +400,7 @@ function RxXerath:SpellPrediction(spell, unit)
       Position = pos
      else
       local EPred = GetPrediction(unit, { delay = self.E.Delay, speed = self.E.Speed, width = self.E.Width, range = self.E.Range })
-      if CountObjectsOnLineSegment(myHero.pos, EPred.castPos, self.E.Width, minionManager.objects, MINION_ENEMY) + CountObjectsOnLineSegment(myHero.pos, EPred.castPos, self.E.Width, minionManager.objects, MINION_JUNGLE) == 0 then
+      if not EPred:mCollision(1) then
        Position, CanCast, HitChance = EPred.castPos, true, EPred.hitChance
       else
        Position, CanCast, HitChance = EPred.castPos, false, EPred.hitChance
@@ -432,8 +436,37 @@ function RxXerath:GetRTarget(pos, range)
     return RTarget
 end
 
-function IsInRange(unit, range)
-	return unit.visible and unit.alive and IsInDistance(unit, range)
+function GetLineFarmPosition2(range, width)
+    local Pos = nil
+    for i, minion in pairs(minionManager.objects) do
+     if IsInRange(minion, range) and minion.team == MINION_ENEMY then
+      if Pos == nil then
+       Pos = Vector(minion)
+      elseif CountObjectsOnLineSegment(Vector(myHero), Pos, width, minionManager.objects, MINION_ENEMY) < CountObjectsOnLineSegment(Vector(myHero), Vector(minion), width, minionManager.objects, MINION_ENEMY) then
+       Pos = Vector(minion)
+      end
+     end
+    end
+    return Pos, CountObjectsOnLineSegment(Vector(myHero), Vector(Pos), width, minionManager.objects, MINION_ENEMY)
+end
+
+function GetFarmPosition2(range, width)
+    local Pos = nil
+    for i, minion in pairs(minionManager.objects) do
+     if IsInRange(minion, range) and minion.team == MINION_ENEMY then
+      if Pos == nil then
+       Pos = Vector(minion)
+      elseif MinionsAround(Pos, width, MINION_ENEMY) < MinionsAround(Vector(minion), width, MINION_ENEMY) then
+       Pos = Vector(minion)
+      end
+     end
+    end
+    return Pos, MinionsAround(Pos, width, MINION_ENEMY)
+end
+
+function IsInRange(unit, range, team)
+    local team = team or MINION_ENEMY
+    return ValidTarget(unit, range, team) and unit.alive and IsInDistance(unit,range)
 end
 
 function RxXerath:UpdateBuff(unit, buff)
@@ -441,11 +474,6 @@ function RxXerath:UpdateBuff(unit, buff)
      if buff.Name == "XerathArcanopulseChargeUp" then
       self.Q.LastCastTime = os.clock()
       self.Q.Charging = true
-      IOW.movementEnabled = true
-     elseif buff.Name == "xerathqsoundbuff" then
-      self.Q.Charging = false
-      self.Q.LastCastTime = 0
-      IOW.attacksEnabled = true
      elseif buff.Name == "XerathLocusOfPower2" then
       self.R.Delay1 = os.clock()
       self.R.LastCastTime = os.clock()
@@ -460,13 +488,19 @@ function RxXerath:RemoveBuff(unit, buff)
       self.Q.Charging = false
      elseif buff.Name == "XerathLocusOfPower2" then
       self.R.Activating = false
+      self.R.Count = 3
+      self.R.Delay1 = 0
+      self.R.Delay2 = 0
+      self.R.Delay3 = 0
+      IOW.movementEnabled = true
+      IOW.attacksEnabled = true
      end
     end
 end
 
 function RxXerath:CheckUpdate()
 	self.Update = {}
-	self.Update.LocalVersion = self.Version
+	self.Update.ScriptVersion = self.ScriptVersion
 	self.Update.UseHttps = true
 	self.Update.Host = "raw.githubusercontent.com"
 	self.Update.VersionPath = "/VTNEET/GoSScripts/master/Version/RxXerath.version"

@@ -358,17 +358,17 @@ function RxXerath:DrawRange()
      DrawCircle3D(Pos.x, Pos.y, Pos.z, self.Q.Range, 1, 0x8000F5FF, self.cfg.dw.Qlt:Value())
     end
     if IsReady(_W) and self.cfg.dw.W:Value() then DrawCircle3D(Pos.x, Pos.y, Pos.z, self.W.Range, 1, 0x80BA55D3, self.cfg.dw.Qlt:Value()) end
-    if IsReady(_E) and self.cfg.dw.E:Value() then DrawCircle3D(Pos.x, Pos.y, Pos.z, self.E.Range, 1, 0x80FF7F24, self.cfg.dw.Qlt:Value()) end
+    if IsReady(_E) and self.cfg.dw.E:Value() then DrawCircle3D(Pos.x, Pos.y, Pos.z, self.E.Range, 1, 0x80FF4500, self.cfg.dw.Qlt:Value()) end
     if self.cfg.ult.cast.mode:Value() == 3 and self.R.Activating and self.cfg.ult.cast.draw:Value() then DrawCircle3D(mPos.x, mPos.y, mPos.z, self.cfg.ult.cast.range:Value(), 1, 0xFFFFFF00, self.cfg.dw.Qlt:Value()) end
 end
 
 function RxXerath:DmgHPBar()
     for i, enemy in pairs(GetEnemyHeroes()) do
      if IsInRange(enemy, self.R.Range()) then
-      if IsReady(_Q) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.Q.Damage(enemy), enemy.health), 0x9000F5FF) end
-      if IsReady(_W) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.W.Damage(enemy), enemy.health), 0x80BA55D3) end
-      if IsReady(_E) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.E.Damage(enemy), enemy.health), 0x70FF7F24) end
-      if IsReady(_R) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.R.Damage(enemy) * self.R.Count, enemy.health), 0x60FFFF00) end
+      if IsReady(_R) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.R.Damage(enemy) * self.R.Count, enemy.health), ARGB(255, 255, 255, 0)) end
+      if IsReady(_Q) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.Q.Damage(enemy), enemy.health), ARGB(225, 0, 228, 240)) end
+      if IsReady(_W) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.W.Damage(enemy), enemy.health), ARGB(195, 186, 85, 211)) end
+      if IsReady(_E) then DrawDmgOverHpBar(enemy, enemy.health, 0, math.min(self.E.Damage(enemy), enemy.health), ARGB(165, 255, 69, 0)) end
      end
     end
 end
@@ -510,7 +510,7 @@ function RxXerath:CheckUpdate()
 	self.Update.CallbackNoUpdate = function(NewVersion) self:Print("You are using Lastest Version ("..NewVersion..")") self:Hello() end
 	self.Update.CallbackNewVersion = function(NewVersion) self:Print("New Version found ("..NewVersion.."). Please wait...") end
 	self.Update.CallbackError = function() self:Print("Error when checking update. Please try again.") end
-	AutoUpdater(self.Update.LocalVersion, self.Update.UseHttps, self.Update.Host, self.Update.VersionPath, self.Update.ScriptPath, self.Update.SavePath, self.Update.CallbackUpdate, self.Update.CallbackNoUpdate, self.Update.CallbackNewVersion, self.Update.CallbackError)
+	AutoUpdater(self.Update.ScriptVersion, self.Update.UseHttps, self.Update.Host, self.Update.VersionPath, self.Update.ScriptPath, self.Update.SavePath, self.Update.CallbackUpdate, self.Update.CallbackNoUpdate, self.Update.CallbackNewVersion, self.Update.CallbackError)
 end
 
 function RxXerath:Print(text)

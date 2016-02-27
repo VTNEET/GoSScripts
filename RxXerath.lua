@@ -33,7 +33,7 @@ function RxXerath:LoadValues()
 end
 
 function RxXerath:CreateMenu()
- self.cfg = MenuConfig("RxXerath", "[Rx Xerath] Version: "..self.Version)
+ self.cfg = MenuConfig("RxXerath", "[Rx Xerath] Version: "..self.ScriptVersion)
 
     --[[ Combo Menu ]]--
     self.cfg:Menu("cb", "Combo")
@@ -298,9 +298,8 @@ function RxXerath:LaneClear()
 end
 
 function RxXerath:JungleClear()
-    for M=1, minionManager.maxObjects do
-    local mob = minionManager.objects[M]
-     if mob.team == MINION_JUNGLE and mob.health > 0 and IsInRange(mob, self.Q.maxRange, MINION_JUNGLE) then
+    local mob = IOW:GetJungleClear()
+     if mob and IsInRange(mob, self.Q.maxRange, MINION_JUNGLE) then
       if IsReady(_W) and self.cfg.jc.W:Value() and IsInRange(mob, self.W.Range, MINION_JUNGLE) then
        CastSkillShot(_W, GetCircularAOEPrediction(mob, { delay = self.W.Delay, speed = self.W.Speed, width = self.W.Width, range = self.W.Range }).castPos)
       end
@@ -311,10 +310,9 @@ function RxXerath:JungleClear()
        CastSkillShot(_Q, GetMousePos())
       elseif IsReady(_Q) and self.cfg.jc.Q:Value() and self.Q.Charging then
        local QPred = GetLinearAOEPrediction(mob, { delay = self.Q.Delay, speed = self.Q.Speed, width = self.Q.Width, range = self.Q.maxRange })
-       if QPred and GetDistance(Vector(QPred.castPos)) <= self.Q.Range then CastSkillShot2(_Q, QPred.castPos) end
+       if QPred and GetDistance(QPred.castPos, myHero.pos) <= self.Q.Range then CastSkillShot2(_Q, QPred.castPos) end
       end
      end
-    end
 end
 
 function RxXerath:AutoE(unit, spell)

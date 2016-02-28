@@ -7,14 +7,14 @@ local NEETS_Update = {}
     NEETS_Update.ScriptVersion = 0.01
     NEETS_Update.UseHttps = true
     NEETS_Update.Host = "raw.githubusercontent.com"
-    NEETS_Update.VersionPath = "/VTNEET/GoSScripts/master/Version/NEETSeries.version"
+    NEETS_Update.VersionPath = "/VTNEET/GoSScripts/master/NEETSeries.version"
     NEETS_Update.ScriptPath = "/VTNEET/GoSScripts/master/NEETSeries.lua"
     NEETS_Update.SavePath = SCRIPT_PATH.."/NEETSeries.lua"
     NEETS_Update.CallbackUpdate = function(NewVersion) NEETSeries_Print("Updated to "..NewVersion..". Please F6 x2 to reload.") end
     NEETS_Update.CallbackNoUpdate = function(NewVersion) NEETSeries_Print("You are using Lastest Version ("..NewVersion..")") NEETSeries_Hello() end
     NEETS_Update.CallbackNewVersion = function(NewVersion) NEETSeries_Print("New Version found ("..NewVersion.."). Please wait...") end
     NEETS_Update.CallbackError = function() NEETSeries_Print("Error when checking update. Please try again.") end
-    --Callback.Add("Load", function() AutoUpdater(NEETS_Update.ScriptVersion, NEETS_Update.UseHttps, NEETS_Update.Host, NEETS_Update.VersionPath, NEETS_Update.ScriptPath, NEETS_Update.SavePath, self.CallbackUpdate, NEETS_Update.CallbackNoUpdate, NEETS_Update.CallbackNewVersion, NEETS_Update.CallbackError) end)
+    Callback.Add("AfterLoad", function() AutoUpdater(NEETS_Update.ScriptVersion, NEETS_Update.UseHttps, NEETS_Update.Host, NEETS_Update.VersionPath, NEETS_Update.ScriptPath, NEETS_Update.SavePath, NEETS_Update.CallbackUpdate, NEETS_Update.CallbackNoUpdate, NEETS_Update.CallbackNewVersion, NEETS_Update.CallbackError) end)
 --[[ -------------------------------------------------- ]]--
 
 class "NS_Xerath"
